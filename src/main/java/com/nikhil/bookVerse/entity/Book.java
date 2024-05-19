@@ -21,6 +21,12 @@ public class Book {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "copies")
+    private int copies;
+
+    @Column(name = "copies_available")
+    private int copiesAvailable;
+
     @Column(name = "category")
     private String category;
 
