@@ -1,11 +1,14 @@
 package com.nikhil.bookVerse.controller;
 
 import com.nikhil.bookVerse.entity.Book;
+import com.nikhil.bookVerse.responsemodels.ShelfCurrentLoansResponse;
 import com.nikhil.bookVerse.service.BookService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @CrossOrigin("http://localhost:5173")
 @RestController
@@ -44,5 +47,14 @@ public class BookController {
             throw new RuntimeException("User email not found in request attributes.");
         }
         return bookService.currentLoansCount(userEmail);
+    }
+
+    @GetMapping("/secure/currentloans")
+    public List<ShelfCurrentLoansResponse> currentLoans(HttpServletRequest request) throws Exception {
+        String userEmail = (String) request.getAttribute("email");
+        if (userEmail == null) {
+            throw new RuntimeException("User email not found in request attributes.");
+        }
+        return bookService.currentLoans(userEmail);
     }
 }

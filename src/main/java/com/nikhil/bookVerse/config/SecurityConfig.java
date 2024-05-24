@@ -22,6 +22,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -45,12 +48,17 @@ public class SecurityConfig {
         return http.build();
     }
 
+
+
     public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
+        private static final Logger logger = LoggerFactory.getLogger(FirebaseAuthenticationFilter.class);
+
         @Override
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
             String authHeader = request.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String idToken = authHeader.substring(7);
+                logger.info("Received token: {}", idToken);
                 try {
                     FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
                     String email = decodedToken.getEmail();
@@ -62,14 +70,20 @@ public class SecurityConfig {
 
                         request.setAttribute("firebaseToken", decodedToken);
                         request.setAttribute("email", email);
+
+                        logger.info("Successfully authenticated user with email: {}", email);
                     } else {
+                        logger.warn("Email not found in token");
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         return;
                     }
                 } catch (Exception e) {
+                    logger.error("Failed to verify token", e);
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
+            } else {
+                logger.warn("Authorization header is missing or does not start with Bearer");
             }
             filterChain.doFilter(request, response);
         }
