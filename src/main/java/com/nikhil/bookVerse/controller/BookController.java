@@ -57,4 +57,13 @@ public class BookController {
         }
         return bookService.currentLoans(userEmail);
     }
+
+    @PutMapping("/secure/return")
+    public void returnBook(HttpServletRequest request, @RequestParam Long bookId) throws Exception{
+        String userEmail = (String) request.getAttribute("email");
+        if (userEmail == null) {
+            throw new RuntimeException("User email not found in request attributes.");
+        }
+        bookService.returnBook(userEmail, bookId);
+    }
 }
