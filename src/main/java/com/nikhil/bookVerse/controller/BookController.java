@@ -66,4 +66,13 @@ public class BookController {
         }
         bookService.returnBook(userEmail, bookId);
     }
+
+    @PutMapping("/secure/renew/loan")
+    public void renewLoan(HttpServletRequest request, @RequestParam Long bookId) throws Exception{
+        String userEmail = (String) request.getAttribute("email");
+        if (userEmail == null) {
+            throw new RuntimeException("User email not found in request attributes.");
+        }
+        bookService.renewLoan(userEmail, bookId);
+    }
 }
