@@ -2,8 +2,10 @@ package com.nikhil.bookVerse.service;
 
 import com.nikhil.bookVerse.entity.Book;
 import com.nikhil.bookVerse.entity.Checkout;
+import com.nikhil.bookVerse.entity.History;
 import com.nikhil.bookVerse.repository.BookRepository;
 import com.nikhil.bookVerse.repository.CheckoutRepository;
+import com.nikhil.bookVerse.repository.HistoryRepository;
 import com.nikhil.bookVerse.responsemodels.ShelfCurrentLoansResponse;
 import org.hibernate.annotations.Check;
 import org.springframework.stereotype.Service;
@@ -23,10 +25,12 @@ import java.util.concurrent.TimeUnit;
 public class BookService {
     private BookRepository bookRepository;
     private CheckoutRepository checkoutRepository;
+    private HistoryRepository historyRepository;
 
-    public BookService(BookRepository bookRepository, CheckoutRepository checkoutRepository){
+    public BookService(BookRepository bookRepository, CheckoutRepository checkoutRepository, HistoryRepository historyRepository){
         this.bookRepository = bookRepository;
         this.checkoutRepository = checkoutRepository;
+        this.historyRepository = historyRepository;
     }
 
     public Book checkoutBook(String userEmail, Long bookId) throws Exception{
@@ -95,21 +99,37 @@ public class BookService {
         return shelfCurrentLoansResponses;
     }
 
-    public void returnBook (String userEmail, Long bookId) throws Exception{
-        Optional<Book> book = bookRepository.findById(bookId);
+    public void returnBook(String userEmail, Long bookId) throws Exception {
+        try {
+            Optional<Book> book = bookRepository.findById(bookId);
+            Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
-        Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
+            if (!book.isPresent() || validateCheckout == null) {
+                throw new Exception("Book does not exist or not checked out by user");
+            }
 
-        if(!book.isPresent() || validateCheckout == null){
-            throw new Exception("Book does not exist or not checked out by user");
+            book.get().setCopiesAvailable(book.get().getCopiesAvailable() + 1);
+            bookRepository.save(book.get());
+            checkoutRepository.deleteById(validateCheckout.getId());
+
+            History history = new History(
+                    userEmail,
+                    validateCheckout.getCheckoutDate(),
+                    LocalDate.now().toString(),
+                    book.get().getTitle(),
+                    book.get().getAuthor(),
+                    book.get().getDescription(),
+                    book.get().getImg()
+            );
+            historyRepository.save(history);
+        } catch (Exception e) {
+            // Log the exception
+            System.err.println("Error while returning book: " + e.getMessage());
+            e.printStackTrace();
+            throw e; // Re-throw the exception to propagate it upwards
         }
-
-        book.get().setCopiesAvailable(book.get().getCopiesAvailable() + 1);
-
-        bookRepository.save(book.get());
-
-        checkoutRepository.deleteById(validateCheckout.getId());
     }
+
 
     public void renewLoan(String userEmail, Long bookId) throws Exception{
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
@@ -126,6 +146,7 @@ public class BookService {
             validateCheckout.setReturnDate(LocalDate.now().plusDays(7).toString());
             checkoutRepository.save(validateCheckout);
         }
-
     }
+
+
 }
