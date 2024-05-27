@@ -1,6 +1,7 @@
 package com.nikhil.bookVerse.controller;
 
 import com.nikhil.bookVerse.entity.Message;
+import com.nikhil.bookVerse.requestmodels.AdminQuestionRequest;
 import com.nikhil.bookVerse.service.MessageService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,5 +25,14 @@ public class MessageController {
             throw new RuntimeException("User email not found in request attributes.");
         }
         messageService.postMessage(messageRequest, userEmail);
+    }
+
+    @PutMapping("/secure/admin/message")
+    public void putMessage(HttpServletRequest request, @RequestBody AdminQuestionRequest adminQuestionRequest) throws Exception{
+        String userEmail = (String) request.getAttribute("email");
+        if (userEmail == null) {
+            throw new RuntimeException("User email not found in request attributes.");
+        }
+        messageService.putMessage(adminQuestionRequest, userEmail);
     }
 }
