@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,9 +24,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -37,7 +36,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/books/secure/**").authenticated()
                                 .requestMatchers("/api/reviews/secure/**").authenticated()
                                 .requestMatchers("/api/messages/secure/**").authenticated()
-                                .requestMatchers("/api/admin/secure/**").authenticated()
+                                .requestMatchers("/api/admin/secure/**").hasAuthority("ROLE_ADMIN")
                                 .anyRequest().permitAll()
                 )
                 .addFilterBefore(new FirebaseAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
@@ -47,8 +46,6 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-
 
     public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
         private static final Logger logger = LoggerFactory.getLogger(FirebaseAuthenticationFilter.class);
@@ -62,16 +59,20 @@ public class SecurityConfig {
                 try {
                     FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
                     String email = decodedToken.getEmail();
+                    Boolean isAdmin = decodedToken.getClaims().get("admin") != null && (Boolean) decodedToken.getClaims().get("admin");
+
+                    logger.info("Decoded token claims: {}", decodedToken.getClaims());
 
                     if (email != null) {
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                email, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+                                email, null, Collections.singletonList(new SimpleGrantedAuthority(isAdmin ? "ROLE_ADMIN" : "ROLE_USER")));
                         SecurityContextHolder.getContext().setAuthentication(authentication);
 
                         request.setAttribute("firebaseToken", decodedToken);
                         request.setAttribute("email", email);
 
                         logger.info("Successfully authenticated user with email: {}", email);
+                        logger.info("Granted authorities: {}", authentication.getAuthorities());
                     } else {
                         logger.warn("Email not found in token");
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
