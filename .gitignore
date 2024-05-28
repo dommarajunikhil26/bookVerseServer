@@ -34,3 +34,6 @@ build/
 
 ### Json File ###
 *.json
+
+### ENV File ###
+.env
